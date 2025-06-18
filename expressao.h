@@ -8,11 +8,11 @@ typedef struct {
 } Expressao;
 
 typedef struct No{
-    float valor;
+    char expressao[100];
     struct No * anterior;
 }No; 
 
-void getFormaInFixa(char *Str); // Retorna a forma inFixa de Str (posFixa)
+char * getFormaInFixa(char *Str); // Retorna a forma inFixa de Str (posFixa)
 char *getFormaPosFixa(char *Str); // Retorna a forma posFixa de Str (inFixa)
 float getValorPosFixa(char *StrPosFixa); // Calcula o valor de Str (na forma posFixa)
 float getValorInFixa(char *StrInFixa); // Calcula o valor de Str (na forma inFixa)
