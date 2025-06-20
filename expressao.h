@@ -2,20 +2,18 @@
 #define EXPRESSAO_H
 
 typedef struct {
-    char posFixa[512]; // Expressão na forma pos-fixa, como 3 12 4 + *
-    char inFixa[512]; // Expressão na forma infixa, como 3 * (12 + 4)
-    float Valor; // Valor numérico da expressão
+    char posFixa[512];     
+    char inFixa[512];      
+    float Valor;           
 } Expressao;
 
-typedef struct No{
-    char expressao[100];
-    struct No * anterior;
-}No; 
+// Expressão na forma pos-fixa, como 3 12 4 + *
+// Expressão na forma infixa, como 3 * (12 + 4)
+// Valor numérico da expressão
 
-char * getFormaInFixa(char *Str); // Retorna a forma inFixa de Str (posFixa)
-char *getFormaPosFixa(char *Str); // Retorna a forma posFixa de Str (inFixa)
+char *getFormaInFixa(char *Str);       // Retorna a forma inFixa de Str (posFixa)
+char *getFormaPosFixa(char *Str);      // Retorna a forma posFixa de Str (inFixa)
 float getValorPosFixa(char *StrPosFixa); // Calcula o valor de Str (na forma posFixa)
-float getValorInFixa(char *StrInFixa); // Calcula o valor de Str (na forma inFixa)
+float getValorInFixa(char *StrInFixa);   // Calcula o valor de Str (na forma inFixa)
 
-
-#endif 
+#endif

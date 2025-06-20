@@ -1,90 +1,289 @@
-#include <stdio.h>
+#include <stdio.h> 
 #include <stdlib.h>
-#include <ctype.h>
 #include <string.h>
-
+#include <math.h>
 #include "expressao.h"
+#include <ctype.h>
+#include <locale.h>
 
-No * inicializarPilha(){
-    No * no = malloc(sizeof(No));
+#define MAX 512
 
-    no->anterior = NULL;
+typedef struct {
+    float items[MAX];
+    int top;
+} StackFloat;
 
-    return no;
+typedef struct {
+    char items[MAX][50];
+    int top;
+} StackString;
+
+// Inicializa pilha de float
+void initFloat(StackFloat *s) {
+    s->top = -1;
 }
 
-No * Empilhar(char X[100], No * topo){
-    No * no = malloc(sizeof(No));
-    if (no == NULL){
-        printf("ERRO DE ALOCAÇÂO");
-        return NULL;
+// Verifica se a pilha de float está vazia
+int isEmptyFloat(StackFloat *s) {
+    return s->top == -1;
+}
+
+// Empilha um valor float
+void pushFloat(StackFloat *s, float value) {
+    s->items[++(s->top)] = value;
+}
+
+// Desempilha um valor float
+float popFloat(StackFloat *s) {
+    return s->items[(s->top)--];
+}
+
+// Inicializa pilha de strings
+void initString(StackString *s) {
+    s->top = -1;
+}
+
+// Empilha uma string
+void pushString(StackString *s, char *value) {
+    strcpy(s->items[++(s->top)], value);
+}
+
+// Desempilha uma string
+char* popString(StackString *s) {
+    return s->items[(s->top)--];
+}
+
+// Verifica se é operador
+int isOperator(char *token) {
+    return (strcmp(token, "+") == 0 || strcmp(token, "-") == 0 || strcmp(token, "*") == 0 ||
+            strcmp(token, "/") == 0 || strcmp(token, "%") == 0 || strcmp(token, "^") == 0);
+}
+
+// Verifica se é função matemática
+int isFunction(char *token) {
+    return (strcmp(token, "sen") == 0 || strcmp(token, "cos") == 0 || strcmp(token, "tg") == 0 ||
+            strcmp(token, "log") == 0 || strcmp(token, "raiz") == 0);
+}
+
+// Define prioridade dos operadores
+int precedence(char c) {
+    if (c == '^') return 3;
+    if (c == '*' || c == '/' || c == '%') return 2;
+    if (c == '+' || c == '-') return 1;
+    return 0;
+}
+
+// Converte expressão INFIXA para PÓS-FIXA
+char* getFormaPosFixa(char *Str) {
+    static char output[MAX] = "";
+    char stackOp[MAX][50];
+    int top = -1, k = 0;
+
+    output[0] = '\0';
+    char token[50];
+    int i = 0, j = 0;
+
+    while (i <= strlen(Str)) {
+        char c = Str[i];
+
+        if (isspace(c)) {
+            i++;
+            continue;
+        }
+
+        if (isalnum(c)) {
+            j = 0;
+            while (isalnum(Str[i])) {
+                token[j++] = Str[i++];
+            }
+            token[j] = '\0';
+
+            if (isFunction(token)) {
+                strcpy(stackOp[++top], token);
+            } else {
+                strcat(output, token);
+                strcat(output, " ");
+            }
+            continue;
+        }
+
+        if (c == '(') {
+            strcpy(stackOp[++top], "(");
+        } else if (c == ')') {
+            while (top >= 0 && strcmp(stackOp[top], "(") != 0) {
+                strcat(output, stackOp[top--]);
+                strcat(output, " ");
+            }
+            if (top >= 0 && strcmp(stackOp[top], "(") == 0) {
+                top--;
+            }
+            if (top >= 0 && isFunction(stackOp[top])) {
+                strcat(output, stackOp[top--]);
+                strcat(output, " ");
+            }
+        } else {
+            char op[2] = {c, '\0'};
+            while (top >= 0 && !isFunction(stackOp[top]) && strcmp(stackOp[top], "(") != 0 &&
+                   precedence(stackOp[top][0]) >= precedence(c)) {
+                strcat(output, stackOp[top--]);
+                strcat(output, " ");
+            }
+            strcpy(stackOp[++top], op);
+        }
+        i++;
     }
 
-    strcpy(no->expressao, X);
-    no->anterior = topo;
-    return no;
-}
-
-No * Desempilhar(No **topo){
-    if (*topo == NULL){
-        printf("PILHA VAZIA");
-        return NULL;
+    while (top >= 0) {
+        strcat(output, stackOp[top--]);
+        strcat(output, " ");
     }
 
-    No *remover = *topo;
-    *topo = remover->anterior;
-    return *topo;
+    return output;
 }
 
-void imprimirFila(No *topo){
-    while (topo){
-        printf("%s, ", topo->expressao);        //retirar essa função depois, fiz ela só pra testar
-        topo = topo->anterior;
+// Converte expressão PÓS-FIXA para INFIXA
+char* getFormaInFixa(char *Str) {
+    static char result[MAX] = "";
+    StackString stack;
+    initString(&stack);
+
+    char buffer[MAX];
+    strcpy(buffer, Str);
+    char *token = strtok(buffer, " ");
+
+    while (token) {
+        if (isOperator(token)) {
+            char b[50], a[50], expr[150];
+            strcpy(b, popString(&stack));
+            strcpy(a, popString(&stack));
+            sprintf(expr, "(%s %s %s)", a, token, b);
+            pushString(&stack, expr);
+        } else if (isFunction(token)) {
+            char a[50], expr[100];
+            strcpy(a, popString(&stack));
+            sprintf(expr, "%s(%s)", token, a);
+            pushString(&stack, expr);
+        } else {
+            pushString(&stack, token);
+        }
+        token = strtok(NULL, " ");
     }
+
+    strcpy(result, popString(&stack));
+    return result;
 }
 
-char * getFormaInFixa(char *Str){       // Retorna a forma inFixa de Str (posFixa)
-    No * pilha = NULL;  
-    char *token = strtok(Str, " ");     // passa por cada elemento separando por " "
+// Calcula valor de expressão POS-FIXA
+float getValorPosFixa(char *StrPosFixa) {
+    StackFloat stack;
+    initFloat(&stack);
 
+    char expr[MAX];
+    strcpy(expr, StrPosFixa);
+    char *token = strtok(expr, " ");
+
+    while (token) {
+        if (isOperator(token)) {
+            float b = popFloat(&stack);
+            float a = popFloat(&stack);
+
+            if (strcmp(token, "+") == 0) pushFloat(&stack, a + b);
+            else if (strcmp(token, "-") == 0) pushFloat(&stack, a - b);
+            else if (strcmp(token, "*") == 0) pushFloat(&stack, a * b);
+            else if (strcmp(token, "/") == 0) pushFloat(&stack, a / b);
+            else if (strcmp(token, "%") == 0) pushFloat(&stack, (int)a % (int)b);
+            else if (strcmp(token, "^") == 0) pushFloat(&stack, powf(a, b));
+
+        } else if (isFunction(token)) {
+            float a = popFloat(&stack);
+
+            if (strcmp(token, "sen") == 0) pushFloat(&stack, sinf(a * M_PI / 180));
+            else if (strcmp(token, "cos") == 0) pushFloat(&stack, cosf(a * M_PI / 180));
+            else if (strcmp(token, "tg") == 0) pushFloat(&stack, tanf(a * M_PI / 180));
+            else if (strcmp(token, "log") == 0) pushFloat(&stack, log10f(a));
+            else if (strcmp(token, "raiz") == 0) pushFloat(&stack, sqrtf(a));
+
+        } else {
+            pushFloat(&stack, atof(token));
+        }
+
+        token = strtok(NULL, " ");
+    }
+
+    return popFloat(&stack);
+}
+
+// Calcula valor de expressão INFIXA convertendo para pós-fixa antes
+float getValorInFixa(char *StrInFixa) {
+    char posFixa[MAX];
+    strcpy(posFixa, getFormaPosFixa(StrInFixa));
+    return getValorPosFixa(posFixa);
+}
+
+// Valida se a expressão é infixa ou pós-fixa e se está correta
+int validaExpressao(char *expr) {
+    char copia[MAX];
+    strcpy(copia, expr);
+    char *token = strtok(copia, " ");
+
+    int temOperadorOuFuncao = 0;
+    int temOperando = 0;
+    int temParenteses = 0;
+
+    // Verifica se há parênteses, indicando INFIXA
+    for (int i = 0; expr[i] != '\0'; i++) {
+        if (expr[i] == '(' || expr[i] == ')') {
+            temParenteses = 1;
+            break;
+        }
+    }
+
+    if (temParenteses) {
+        // Converte infixa para pós-fixa para análise
+        char *pos = getFormaPosFixa(expr);
+        if (pos == NULL || strlen(pos) == 0) return 0;
+
+        char temp[MAX];
+        strcpy(temp, pos);
+        char *tok = strtok(temp, " ");
+
+        while (tok != NULL) {
+            if (isOperator(tok) || isFunction(tok)) {
+                temOperadorOuFuncao = 1;
+            } else {
+                char *endptr;
+                strtof(tok, &endptr);
+                if (*endptr == '\0') temOperando = 1;
+            }
+            tok = strtok(NULL, " ");
+        }
+
+        return (temOperadorOuFuncao && temOperando);
+    }
+
+    // Se não tem parênteses, assume POS-FIXA
     while (token != NULL) {
-        if (isdigit(token[0])){         //identifica se o token é um número
-            pilha = Empilhar(token, pilha);
+        int valido = 0;
+
+        if (isOperator(token)) {
+            valido = 1;
+            temOperadorOuFuncao = 1;
+        } else if (isFunction(token)) {
+            valido = 1;
+            temOperadorOuFuncao = 1;
+        } else {
+            char *endptr;
+            strtof(token, &endptr);
+            if (*endptr == '\0') {
+                valido = 1;
+                temOperando = 1;
+            }
         }
 
-        else if (strcmp(token, "+") == 0 || strcmp(token, "-") == 0 || strcmp(token, "*") || strcmp(token, "/") || strcmp(token, "^") == 0 || strcmp(token, "%") == 0 || strcmp(token, "raiz") == 0) {
-            char aux1[100], aux2[200], novaexpressao[100];  //caso for qualquer uma das operações a cima, ele:
-            strcpy(aux1, pilha->expressao);     //guarda o ultimo elemento em uma variavel local;
-            Desempilhar(&pilha);                //desempilha 
-            strcpy(aux2, pilha->expressao);     //guarda o outro elemento em outra variavel local
-            Desempilhar(&pilha);                //desempilha 
+        if (!valido) return 0;
 
-            sprintf(novaexpressao, "(%s %s %s)", aux2, token, aux1);    //cria uma nova string que junta as 2 junto com o operador identificado
-
-            pilha = Empilhar(novaexpressao, pilha);         //salva na pilha 
-        }else if (strcmp(token, "sen") == 0 || strcmp(token, "cos") == 0 || strcmp(token, "tan") == 0 || strcmp(token, "tg") == 0 || strcmp(token, "log") == 0) {
-            char aux[100], novaexpressao[110];
-            strcpy(aux, pilha->expressao);
-            Desempilhar(&pilha);                             //essa parte ainda n esta funcionando, n sei pq mas quando    
-            sprintf(novaexpressao, "(%s%s)", token, aux);    //a operação tem log ou qualquer outra das acima ela n identifica   
-            pilha = Empilhar(novaexpressao, pilha);
-        }
-            token = strtok(NULL, " ");
-        }
-
-        char *infixa = malloc(521);
-        strcpy(infixa, pilha->expressao);       //copia o ultimo elemento restante da pilha no ponteiro 
-        
-        return infixa;                          //retorna o ponteiro
+        token = strtok(NULL, " ");
     }
 
-/*
-char *getFormaPosFixa(char *Str){
-    
+    return (temOperadorOuFuncao && temOperando);
 }
-float getValorPosFixa(char *StrPosFixa){
-    
-}
-float getValorInFixa(char *StrInFixa){
-
-}*/
