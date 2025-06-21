@@ -75,17 +75,17 @@ int main() {
     int opcao;
 
     do {
-        printf("\n==== AVALIADOR DE EXPRESSAO ====");
-        printf("\n1 - Inserir expressao na forma INFIXA");
-        printf("\n2 - Inserir expressao na forma POS-FIXA");
+        printf("\n==== AVALIADOR DE EXPRESSÃO ====");
+        printf("\n1 - Inserir expressão na forma INFIXA");
+        printf("\n2 - Inserir expressão na forma PÓS-FIXA");
         printf("\n0 - Sair");
-        printf("\nEscolha uma opcao: ");
+        printf("\nEscolha uma opção: ");
         scanf("%d", &opcao);
         getchar();
 
         switch (opcao) {
             case 1:
-                printf("Digite a expressao INFIXA:\n> ");
+                printf("Digite a expressão INFIXA: (Caso seja numero menor que zero, use virgula)\n> ");
                 fgets(expr.inFixa, 512, stdin);
                 expr.inFixa[strcspn(expr.inFixa, "\n")] = 0;
 
@@ -94,7 +94,7 @@ int main() {
                 strcpy(expr.inFixa, infixaAjustada);
 
                 if (!validaExpressao(expr.inFixa)) {
-                    printf("\nExpressao invalida. Tente novamente!\n");
+                    printf("\nExpressão inválida. Tente novamente!\n");
                     continue;
                 }
 
@@ -102,24 +102,24 @@ int main() {
                 expr.Valor = getValorInFixa(expr.inFixa);
 
                 printf("\nINFIXA: %s\n", expr.inFixa);
-                printf("POS-FIXA: %s\n", expr.posFixa);
+                printf("PÓS-FIXA: %s\n", expr.posFixa);
                 printf("VALOR: %.6f\n", expr.Valor);
                 break;
 
             case 2:
-                printf("Digite a expressao PÓS-FIXA:\n> ");
+                printf("Digite a expressão PÓS-FIXA: (Caso seja numero menor que zero, use virgula)\n> ");
                 fgets(expr.posFixa, 512, stdin);
                 expr.posFixa[strcspn(expr.posFixa, "\n")] = 0;
 
                 if (!validaExpressao(expr.posFixa)) {
-                    printf("\nExpressao invalida. Tente novamente!\n");
+                    printf("\nExpressão inválida. Tente novamente!\n");
                     continue;
                 }
 
                 strcpy(expr.inFixa, getFormaInFixa(expr.posFixa));
                 expr.Valor = getValorPosFixa(expr.posFixa);
 
-                printf("\nPOS-FIXA: %s\n", expr.posFixa);
+                printf("\nPÓS-FIXA: %s\n", expr.posFixa);
                 printf("INFIXA: %s\n", expr.inFixa);
                 printf("VALOR: %.6f\n", expr.Valor);
                 break;
@@ -129,7 +129,7 @@ int main() {
                 break;
 
             default:
-                printf("\nOpcao invalida.\n");
+                printf("\nOpção inválida.\n");
                 break;
         }
 

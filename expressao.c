@@ -222,68 +222,49 @@ float getValorInFixa(char *StrInFixa) {
 
 // Valida se a expressão é infixa ou pós-fixa e se está correta
 int validaExpressao(char *expr) {
-    char copia[MAX];
-    strcpy(copia, expr);
-    char *token = strtok(copia, " ");
+    int contParenteses = 0;
+    int numOperandos = 0;
+    int numOperadores = 0;
+    char buffer[512];
+    strcpy(buffer, expr);
+    char *token = strtok(buffer, " ");
 
-    int temOperadorOuFuncao = 0;
-    int temOperando = 0;
-    int temParenteses = 0;
-
-    // Verifica se há parênteses, indicando INFIXA
-    for (int i = 0; expr[i] != '\0'; i++) {
-        if (expr[i] == '(' || expr[i] == ')') {
-            temParenteses = 1;
-            break;
-        }
-    }
-
-    if (temParenteses) {
-        // Converte infixa para pós-fixa para análise
-        char *pos = getFormaPosFixa(expr);
-        if (pos == NULL || strlen(pos) == 0) return 0;
-
-        char temp[MAX];
-        strcpy(temp, pos);
-        char *tok = strtok(temp, " ");
-
-        while (tok != NULL) {
-            if (isOperator(tok) || isFunction(tok)) {
-                temOperadorOuFuncao = 1;
-            } else {
-                char *endptr;
-                strtof(tok, &endptr);
-                if (*endptr == '\0') temOperando = 1;
-            }
-            tok = strtok(NULL, " ");
-        }
-
-        return (temOperadorOuFuncao && temOperando);
-    }
-
-    // Se não tem parênteses, assume POS-FIXA
     while (token != NULL) {
-        int valido = 0;
-
-        if (isOperator(token)) {
-            valido = 1;
-            temOperadorOuFuncao = 1;
-        } else if (isFunction(token)) {
-            valido = 1;
-            temOperadorOuFuncao = 1;
+        if (strcmp(token, "(") == 0) {
+            contParenteses++;
+        } else if (strcmp(token, ")") == 0) {
+            contParenteses--;
+            if (contParenteses < 0) return 0;
+        } else if (isOperator(token) || isFunction(token)) {
+            numOperadores++;
         } else {
+            // Normaliza vírgula para ponto antes de verificar se é número
+            char tokenCopia[50];
+            strncpy(tokenCopia, token, 49);
+            tokenCopia[49] = '\0';
+
+            // Substitui ',' por '.'
+            for (int i = 0; tokenCopia[i]; i++) {
+                if (tokenCopia[i] == '.') tokenCopia[i] = ',';
+            }
+
+            // Testa se é número válido
             char *endptr;
-            strtof(token, &endptr);
+            strtof(tokenCopia, &endptr);
             if (*endptr == '\0') {
-                valido = 1;
-                temOperando = 1;
+                numOperandos++;
+            } else {
+                return 0; // token inválido
             }
         }
-
-        if (!valido) return 0;
 
         token = strtok(NULL, " ");
     }
 
-    return (temOperadorOuFuncao && temOperando);
+    if (contParenteses != 0) return 0;
+    if (numOperandos == 0) return 0;
+    if (numOperandos == 1 && numOperadores == 0) return 0;
+    if (numOperadores == 0 && numOperandos > 1) return 0;
+
+    return 1;
 }
