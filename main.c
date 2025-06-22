@@ -4,69 +4,74 @@
 #include <locale.h>
 #include <ctype.h>
 #include "expressao.h"
+#include <math.h>
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+// Ajusta a entrada para garantir espaços adequados entre tokens e funções
 void ajustaParenteses(char *entrada, char *saida) {
     int i = 0, j = 0;
     while (entrada[i] != '\0') {
-        if (isspace(entrada[i])) {
-            i++;
-            continue;
-        }
+        if ((strncmp(&entrada[i], "sen", 3) == 0) ||
+            (strncmp(&entrada[i], "cos", 3) == 0) ||
+            (strncmp(&entrada[i], "tg", 2) == 0)  ||
+            (strncmp(&entrada[i], "log", 3) == 0) ||
+            (strncmp(&entrada[i], "raiz", 4) == 0)) {
 
-        // Verifica se é função matemática
-        if (strncmp(&entrada[i], "sen", 3) == 0 ||
-            strncmp(&entrada[i], "cos", 3) == 0 ||
-            strncmp(&entrada[i], "log", 3) == 0) {
-            
             if (j > 0 && saida[j-1] != ' ') saida[j++] = ' ';
-            strncpy(&saida[j], &entrada[i], 3);
-            j += 3; i += 3;
-            saida[j++] = ' ';
-            continue;
-
-        } else if (strncmp(&entrada[i], "tg", 2) == 0) {
-            if (j > 0 && saida[j-1] != ' ') saida[j++] = ' ';
-            strncpy(&saida[j], &entrada[i], 2);
-            j += 2; i += 2;
-            saida[j++] = ' ';
-            continue;
-
-        } else if (strncmp(&entrada[i], "raiz", 4) == 0) {
-            if (j > 0 && saida[j-1] != ' ') saida[j++] = ' ';
-            strncpy(&saida[j], &entrada[i], 4);
-            j += 4; i += 4;
-            saida[j++] = ' ';
-            continue;
-        }
-
-        // Se for operador ou parêntese
-        if (strchr("()+-*/^%", entrada[i])) {
-            if (j > 0 && saida[j-1] != ' ') saida[j++] = ' ';
-            saida[j++] = entrada[i++];
-            saida[j++] = ' ';
-            continue;
-        }
-
-        // É número ou variável
-        if (isalnum(entrada[i]) || entrada[i] == '.') {
-            if (j > 0 && saida[j-1] != ' ') saida[j++] = ' ';
-            while (isalnum(entrada[i]) || entrada[i] == '.') {
-                saida[j++] = entrada[i++];
+            if (strncmp(&entrada[i], "sen", 3) == 0) {
+                strcpy(&saida[j], "sen"); j += 3; i += 3;
+            } else if (strncmp(&entrada[i], "cos", 3) == 0) {
+                strcpy(&saida[j], "cos"); j += 3; i += 3;
+            } else if (strncmp(&entrada[i], "tg", 2) == 0) {
+                strcpy(&saida[j], "tg"); j += 2; i += 2;
+            } else if (strncmp(&entrada[i], "log", 3) == 0) {
+                strcpy(&saida[j], "log"); j += 3; i += 3;
+            } else if (strncmp(&entrada[i], "raiz", 4) == 0) {
+                strcpy(&saida[j], "raiz"); j += 4; i += 4;
             }
             saida[j++] = ' ';
             continue;
         }
-
-        // Caso contrário, apenas ignora o caractere
+        if (entrada[i] == '(' || entrada[i] == ')' ||
+            entrada[i] == '+' || entrada[i] == '-' ||
+            entrada[i] == '*' || entrada[i] == '/' ||
+            entrada[i] == '^' || entrada[i] == '%') {
+            if (j > 0 && saida[j-1] != ' ') saida[j++] = ' ';
+            saida[j++] = entrada[i];
+            if (entrada[i+1] != ' ' && entrada[i+1] != '\0') saida[j++] = ' ';
+        } else if (entrada[i] != ' ') {
+            saida[j++] = entrada[i];
+        }
         i++;
     }
+    saida[j] = '\0';
+}
 
-    // Remove espaço final se houver
+// Função para remover espaços extras e normalizar a expressão infixa
+void normalizaEspacos(char *entrada, char *saida) {
+    int i = 0, j = 0;
+    int ultimoEspaco = 1;
+    while (entrada[i]) {
+        if (isspace(entrada[i])) {
+            if (!ultimoEspaco) {
+                saida[j++] = ' ';
+                ultimoEspaco = 1;
+            }
+        } else {
+            saida[j++] = entrada[i];
+            ultimoEspaco = 0;
+        }
+        i++;
+    }
+    // Remove espaço final, se houver
     if (j > 0 && saida[j-1] == ' ') j--;
     saida[j] = '\0';
 }
 
-int validaExpressao(char *Str);
+int validaExpressao(char *Str, int tipo);
 
 int main() {
     setlocale(LC_ALL, "Portuguese");
@@ -75,26 +80,30 @@ int main() {
     int opcao;
 
     do {
-        printf("\n==== AVALIADOR DE EXPRESSÃO ====");
-        printf("\n1 - Inserir expressão na forma INFIXA");
-        printf("\n2 - Inserir expressão na forma PÓS-FIXA");
+        printf("\n==== AVALIADOR DE EXPRESSAO ====");
+        printf("\n1 - Inserir expressao na forma INFIXA");
+        printf("\n2 - Inserir expressao na forma POS-FIXA");
         printf("\n0 - Sair");
-        printf("\nEscolha uma opção: ");
+        printf("\nEscolha uma opcao: ");
         scanf("%d", &opcao);
         getchar();
 
         switch (opcao) {
             case 1:
-                printf("Digite a expressão INFIXA: (Caso seja numero menor que zero, use virgula)\n> ");
+                printf("Digite a expressao INFIXA:\n> ");
                 fgets(expr.inFixa, 512, stdin);
                 expr.inFixa[strcspn(expr.inFixa, "\n")] = 0;
 
                 char infixaAjustada[512];
                 ajustaParenteses(expr.inFixa, infixaAjustada);
-                strcpy(expr.inFixa, infixaAjustada);
 
-                if (!validaExpressao(expr.inFixa)) {
-                    printf("\nExpressão inválida. Tente novamente!\n");
+                char infixaNormalizada[512];
+                normalizaEspacos(infixaAjustada, infixaNormalizada);
+
+                strcpy(expr.inFixa, infixaNormalizada);
+
+                if (!validaExpressao(expr.inFixa, 0)) {
+                    printf("\nExpressão invalida. Tente novamente!\n");
                     continue;
                 }
 
@@ -102,24 +111,24 @@ int main() {
                 expr.Valor = getValorInFixa(expr.inFixa);
 
                 printf("\nINFIXA: %s\n", expr.inFixa);
-                printf("PÓS-FIXA: %s\n", expr.posFixa);
+                printf("POS-FIXA: %s\n", expr.posFixa);
                 printf("VALOR: %.6f\n", expr.Valor);
                 break;
 
             case 2:
-                printf("Digite a expressão PÓS-FIXA: (Caso seja numero menor que zero, use virgula)\n> ");
+                printf("Digite a expressao POS-FIXA:\n> ");
                 fgets(expr.posFixa, 512, stdin);
                 expr.posFixa[strcspn(expr.posFixa, "\n")] = 0;
 
-                if (!validaExpressao(expr.posFixa)) {
-                    printf("\nExpressão inválida. Tente novamente!\n");
+                if (!validaExpressao(expr.posFixa, 1)) {
+                    printf("\nExpressão invalida. Tente novamente!\n");
                     continue;
                 }
 
                 strcpy(expr.inFixa, getFormaInFixa(expr.posFixa));
                 expr.Valor = getValorPosFixa(expr.posFixa);
 
-                printf("\nPÓS-FIXA: %s\n", expr.posFixa);
+                printf("\nPOS-FIXA: %s\n", expr.posFixa);
                 printf("INFIXA: %s\n", expr.inFixa);
                 printf("VALOR: %.6f\n", expr.Valor);
                 break;

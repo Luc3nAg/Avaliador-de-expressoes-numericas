@@ -8,6 +8,10 @@
 
 #define MAX 512
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 typedef struct {
     float items[MAX];
     int top;
@@ -84,20 +88,31 @@ char* getFormaPosFixa(char *Str) {
     int i = 0, j = 0;
 
     while (i <= strlen(Str)) {
-        char c = Str[i];
-
+    char c = Str[i];
         if (isspace(c)) {
             i++;
             continue;
         }
 
-        if (isalnum(c)) {
+        // Números
+        if (isdigit(c) || c == ',' || c == '.') {
             j = 0;
-            while (isalnum(Str[i])) {
+            while (isdigit(Str[i]) || Str[i] == ',' || Str[i] == '.') {
                 token[j++] = Str[i++];
             }
             token[j] = '\0';
+            strcat(output, token);
+            strcat(output, " ");
+            continue;
+        }
 
+        // Funções
+        if (isalpha(c)) {
+            j = 0;
+            while (isalpha(Str[i])) {
+                token[j++] = Str[i++];
+            }
+            token[j] = '\0';
             if (isFunction(token)) {
                 strcpy(stackOp[++top], token);
             } else {
@@ -107,6 +122,7 @@ char* getFormaPosFixa(char *Str) {
             continue;
         }
 
+        // Parênteses e operadores (restante do seu código)
         if (c == '(') {
             strcpy(stackOp[++top], "(");
         } else if (c == ')') {
@@ -124,7 +140,7 @@ char* getFormaPosFixa(char *Str) {
         } else {
             char op[2] = {c, '\0'};
             while (top >= 0 && !isFunction(stackOp[top]) && strcmp(stackOp[top], "(") != 0 &&
-                   precedence(stackOp[top][0]) >= precedence(c)) {
+                precedence(stackOp[top][0]) >= precedence(c)) {
                 strcat(output, stackOp[top--]);
                 strcat(output, " ");
             }
@@ -202,11 +218,14 @@ float getValorPosFixa(char *StrPosFixa) {
             else if (strcmp(token, "tg") == 0) pushFloat(&stack, tanf(a * M_PI / 180));
             else if (strcmp(token, "log") == 0) pushFloat(&stack, log10f(a));
             else if (strcmp(token, "raiz") == 0) pushFloat(&stack, sqrtf(a));
-
-        } else {
-            pushFloat(&stack, atof(token));
+        }else {
+            char tokenCopia[50];
+            strncpy(tokenCopia, token, 49);
+            tokenCopia[49] = '\0';
+            for (int i = 0; tokenCopia[i]; i++)
+                if (tokenCopia[i] == '.') tokenCopia[i] = ',';
+            pushFloat(&stack, atof(tokenCopia));
         }
-
         token = strtok(NULL, " ");
     }
 
@@ -221,7 +240,7 @@ float getValorInFixa(char *StrInFixa) {
 }
 
 // Valida se a expressão é infixa ou pós-fixa e se está correta
-int validaExpressao(char *expr) {
+int validaExpressao(char *expr, int tipo) {
     int contParenteses = 0;
     int numOperandos = 0;
     int numOperadores = 0;
@@ -235,8 +254,10 @@ int validaExpressao(char *expr) {
         } else if (strcmp(token, ")") == 0) {
             contParenteses--;
             if (contParenteses < 0) return 0;
-        } else if (isOperator(token) || isFunction(token)) {
+        } else if (isOperator(token)) {
             numOperadores++;
+        } else if (isFunction(token)) {
+            // Não incrementa numOperadores
         } else {
             // Normaliza vírgula para ponto antes de verificar se é número
             char tokenCopia[50];
@@ -261,10 +282,29 @@ int validaExpressao(char *expr) {
         token = strtok(NULL, " ");
     }
 
-    if (contParenteses != 0) return 0;
-    if (numOperandos == 0) return 0;
-    if (numOperandos == 1 && numOperadores == 0) return 0;
-    if (numOperadores == 0 && numOperandos > 1) return 0;
-
-    return 1;
+    if (tipo == 0) {
+        // Validação para infixa
+        if (contParenteses != 0) return 0;
+        if (numOperandos == 0) return 0;
+        if (numOperandos == 1 && numOperadores == 0) return 0;
+        if (numOperadores == 0 && numOperandos > 1) return 0;
+        return 1;
+    } else {
+        // Validação para pós-fixa: simula a pilha
+        int pilha = 0;
+        strcpy(buffer, expr);
+        token = strtok(buffer, " ");
+        while (token != NULL) {
+            if (isOperator(token)) {
+                pilha -= 1;
+            } else if (isFunction(token)) {
+                // pilha não muda
+            } else {
+                pilha += 1;
+            }
+            if (pilha < 1) return 0;
+            token = strtok(NULL, " ");
+        }
+        return pilha == 1;
+    }
 }
